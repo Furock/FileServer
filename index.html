@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Verzeichnis + Upload</title>
+  <style>
+    body { font-family: sans-serif; margin: 2em; }
+    ul { list-style-type: none; padding: 0; }
+    li { margin: 4px 0; }
+  </style>
+</head>
+<body>
+
+  <h1>📁 Dateien in <span id="breadcrumbPath"></span></h1>
+  <ul id="file-list">Lade Dateien...</ul>
+
+  <hr>
+
+  <h2>⬆️ Datei hochladen</h2>
+  <form id="upload-form" enctype="multipart/form-data" method="post">
+    <input type="file" name="file" required>
+    <button type="submit">Hochladen</button>
+  </form>
+  <div id="upload-status"></div>
+
+  <script>
+
+    // Aktuellen Pfad aus der URL holen
+    const currentPath = window.location.pathname;
+
+    // Breadcrumb-Div referenzieren
+    const breadcrumb = document.getElementById("breadcrumbPath");
+
+    // Pfadteile aufsplitten ("/path/to/dir" ➜ ["", "path", "to", "dir"])
+    const parts = currentPath.split("/").filter(p => p !== "");
+
+    // Base: beginnt mit /
+    let accumulatedPath = "/";
+
+    // Wenn root, einfach /
+    breadcrumb.innerHTML = `<a href="/">root/</a>`;
+    parts.forEach(part => {
+        accumulatedPath += part + "/";
+
+        const link = document.createElement("a");
+        link.href = accumulatedPath;
+        link.textContent = part;
+        breadcrumb.appendChild(link);
+    });
+
+    async function loadFiles() {
+        if (!window.location.pathname.endsWith("/")) {
+            window.location.pathname += "/";
+        }
+        const res = await fetch("list");
+        const files = await res.json();
+        const ul = document.getElementById("file-list");
+        ul.innerHTML = "";
+        files.forEach(item => {
+            const li = document.createElement("li");
+
+            if (item.type === "folder") {
+                li.innerHTML = `📁 <a href="${item.name}">${item.name}</a>`;
+            } else {
+                li.innerHTML = `<a href="${item.name}">${item.name}</a>`;
+            }
+
+            ul.appendChild(li);
+        });
+    }
+
+    document.getElementById("upload-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const formData = new FormData(form);
+      const res = await fetch("", {
+        method: "POST",
+        body: formData
+      });
+      const text = await res.text();
+      document.getElementById("upload-status").innerText = text;
+      form.reset();
+      loadFiles(); // Liste nach Upload neu laden
+    });
+
+    loadFiles();
+  </script>
+
+</body>
+</html>
